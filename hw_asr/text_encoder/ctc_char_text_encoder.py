@@ -30,7 +30,7 @@ class CTCCharTextEncoder(CharTextEncoder):
                 result.append(char)
             last_char = char
 
-        return result
+        return ''.join(result)
     
     def _extend_and_merge(self, frame, state):
         new_state = defaultdict(float)
