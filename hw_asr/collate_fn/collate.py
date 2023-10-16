@@ -13,15 +13,9 @@ def collate_fn(dataset_items: List[dict]):
     """
     # input fields: ["audio", "spectrogram", "duration","text", "text_encoded", "audio_path"]
     # output fields: ["spectrogram", "text_encoded", "text_encoded_length", "text"]
-
-    spectrograms = [
-        torch.squeeze(row['spectrogram'], 0).T
-        for row in dataset_items
-    ]
-
     return {
-        'spectrogram': pad_sequence(spectrograms, batch_first=True),
-        'text_encoded': pad_sequence([row['text_encoded'] for row in dataset_items], batch_first=True),
+        'spectrogram': pad_sequence([row['spectrogram'].squeeze(0).T for row in dataset_items], batch_first=True),
+        'text_encoded': pad_sequence([row['text_encoded'].T for row in dataset_items], batch_first=True),
         'text_encoded_length': torch.tensor([len(row['text']) for row in dataset_items], dtype=torch.int32),
         'text': [row['text'] for row in dataset_items]
     }
