@@ -23,5 +23,6 @@ def collate_fn(dataset_items: List[dict]):
         'spectrogram_length': torch.tensor(spectrograms_length, dtype=torch.int32),
         'text_encoded': pad_sequence(texts_encoded, batch_first=True),
         'text_encoded_length': torch.tensor(texts_encoded_length, dtype=torch.int32),
-        'text': [row['text'] for row in dataset_items]
+        'text': [row['text'] for row in dataset_items],
+        'audio_path': dataset_items[0]['audio_path']
     }
