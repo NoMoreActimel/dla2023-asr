@@ -20,7 +20,7 @@ def collate_fn(dataset_items: List[dict]):
     texts_encoded_length = [len(row['text']) for row in dataset_items]
     return {
         'spectrogram': pad_sequence(spectrograms, batch_first=True).transpose(1, 2),
-        'spectrograms_length': torch.tensor(spectrograms_length, dtype=torch.int32),
+        'spectrogram_length': torch.tensor(spectrograms_length, dtype=torch.int32),
         'text_encoded': pad_sequence(texts_encoded, batch_first=True),
         'text_encoded_length': torch.tensor(texts_encoded_length, dtype=torch.int32),
         'text': [row['text'] for row in dataset_items]
