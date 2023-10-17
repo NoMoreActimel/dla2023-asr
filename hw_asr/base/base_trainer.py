@@ -12,7 +12,17 @@ class BaseTrainer:
     Base class for all trainers
     """
 
-    def __init__(self, model: BaseModel, criterion, metrics, optimizer, lr_scheduler, config, device):
+    def __init__(
+            self,
+            model: BaseModel,
+            criterion,
+            metrics,
+            rare_eval_metrics,
+            n_epochs_frequency,
+            optimizer, 
+            lr_scheduler, 
+            config, 
+            device):
         self.device = device
         self.config = config
         self.logger = config.get_logger("trainer", config["trainer"]["verbosity"])
@@ -20,6 +30,8 @@ class BaseTrainer:
         self.model = model
         self.criterion = criterion
         self.metrics = metrics
+        self.rare_eval_metrics = rare_eval_metrics,
+        self.n_epochs_frequency = n_epochs_frequency
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
 
@@ -126,6 +138,10 @@ class BaseTrainer:
                         "Training stops.".format(self.early_stop)
                     )
                     break
+            
+            if self.n_epochs_frequency and epoch % self.n_epochs_frequency == 0:
+                
+
 
             if epoch % self.save_period == 0 or best:
                 self._save_checkpoint(epoch, save_best=best, only_best=True)

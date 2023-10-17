@@ -75,20 +75,25 @@
       "args": {
         "name": "CER (argmax)"
       }
-    },
-    {
-      "type": "BeamsearchWERMetric",
-      "args": {
-        "name": "WER (beamsearch)"
-      }
-    },
-    {
-      "type": "BeamsearchCERMetric",
-      "args": {
-        "name": "CER (beamsearch)"
-      }
     }
   ],
+  "rare_eval_metrics": {
+    "n_epochs_frequency": 5,
+    "metrics": [
+      {
+        "type": "BeamsearchWERMetric",
+        "args": {
+          "name": "WER (beamsearch)"
+        }
+      },
+      {
+        "type": "BeamsearchCERMetric",
+        "args": {
+          "name": "CER (beamsearch)"
+        }
+      }
+    ]
+  },
   "lr_scheduler": {
     "type": "OneCycleLR",
     "args": {

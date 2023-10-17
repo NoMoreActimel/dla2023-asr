@@ -27,6 +27,8 @@ class Trainer(BaseTrainer):
             model,
             criterion,
             metrics,
+            rare_eval_metrics,
+            n_epochs_frequency,
             optimizer,
             config,
             device,
@@ -36,7 +38,10 @@ class Trainer(BaseTrainer):
             len_epoch=None,
             skip_oom=True,
     ):
-        super().__init__(model, criterion, metrics, optimizer, lr_scheduler, config, device)
+        super().__init__(
+            model, criterion, metrics, rare_eval_metrics, n_epochs_frequency,
+            optimizer, lr_scheduler, config, device
+        )
         self.skip_oom = skip_oom
         self.text_encoder = text_encoder
         self.config = config
@@ -57,6 +62,10 @@ class Trainer(BaseTrainer):
         self.evaluation_metrics = MetricTracker(
             "loss", *[m.name for m in self.metrics], writer=self.writer
         )
+        self.rare_evaluation_metrics = MetricTracker(
+            *[m.name for m in self.rare_eval_metrics], writer=self.writer
+        ) if self.n_epochs_frequency else None
+
 
     @staticmethod
     def _compute_on_train(metric):
@@ -79,7 +88,7 @@ class Trainer(BaseTrainer):
                 self.model.parameters(), self.config["trainer"]["grad_norm_clip"]
             )
 
-    def _train_epoch(self, epoch):
+    def _train_epoch(self, epoch, do_rare_eval=False):
         """
         Training logic for an epoch
 
@@ -89,6 +98,7 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.train_metrics.reset()
         self.writer.add_scalar("epoch", epoch)
+
         for batch_idx, batch in enumerate(
                 tqdm(self.train_dataloader, desc="train", total=self.len_epoch)
         ):
@@ -96,7 +106,7 @@ class Trainer(BaseTrainer):
                 batch = self.process_batch(
                     batch,
                     is_train=True,
-                    metrics=self.train_metrics,
+                    metrics_tracker=self.train_metrics,
                 )
             except RuntimeError as e:
                 if "out of memory" in str(e) and self.skip_oom:
@@ -129,14 +139,19 @@ class Trainer(BaseTrainer):
             if batch_idx >= self.len_epoch:
                 break
         log = last_train_metrics
-
+        
         for part, dataloader in self.evaluation_dataloaders.items():
-            val_log = self._evaluation_epoch(epoch, part, dataloader)
+            val_log, rare_val_log = self._evaluation_epoch(epoch, part, dataloader, do_rare_eval)
             log.update(**{f"{part}_{name}": value for name, value in val_log.items()})
+            if do_rare_eval:
+                log.update(**{f"{part}_{name}": value for name, value in rare_val_log.items()})
 
         return log
 
-    def process_batch(self, batch, is_train: bool, metrics: MetricTracker):
+    def process_batch(
+            self, batch, is_train: bool, metrics_tracker: MetricTracker,
+            rare_metrics_tracker: MetricTracker = None
+            ):
         batch = self.move_batch_to_device(batch, self.device)
         if is_train:
             self.optimizer.zero_grad()
@@ -158,12 +173,17 @@ class Trainer(BaseTrainer):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-        metrics.update("loss", batch["loss"].item())
+        metrics_tracker.update("loss", batch["loss"].item())
         for met in self.metrics:
-            metrics.update(met.name, met(**batch))
+            metrics_tracker.update(met.name, met(**batch))
+        
+        if rare_metrics_tracker:
+            for met in self.rare_eval_metrics:
+                rare_metrics_tracker.update(met.name, met(**batch))
+    
         return batch
 
-    def _evaluation_epoch(self, epoch, part, dataloader):
+    def _evaluation_epoch(self, epoch, part, dataloader, do_rare_eval=False):
         """
         Validate after training an epoch
 
@@ -172,6 +192,9 @@ class Trainer(BaseTrainer):
         """
         self.model.eval()
         self.evaluation_metrics.reset()
+        if do_rare_eval and self.rare_evaluation_metrics:
+            self.rare_evaluation_metrics.reset()
+
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                     enumerate(dataloader),
@@ -181,7 +204,8 @@ class Trainer(BaseTrainer):
                 batch = self.process_batch(
                     batch,
                     is_train=False,
-                    metrics=self.evaluation_metrics,
+                    metrics_tracker=self.evaluation_metrics,
+                    rare_metrics_tracker=self.rare_evaluation_metrics if do_rare_eval else None
                 )
             self.writer.set_step(epoch * self.len_epoch, part)
             self._log_scalars(self.evaluation_metrics)
@@ -191,7 +215,8 @@ class Trainer(BaseTrainer):
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
             self.writer.add_histogram(name, p, bins="auto")
-        return self.evaluation_metrics.result()
+        
+        return self.evaluation_metrics.result(), self.rare_eval_metrics if do_rare_eval else None
 
     def _progress(self, batch_idx):
         base = "[{}/{} ({:.0f}%)]"
