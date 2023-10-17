@@ -119,7 +119,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run": "one_batch_test_beamsearch",
+    "wandb_run_name": "one_batch_test_beamsearch",
     "len_epoch": 100,
     "grad_norm_clip": 10
   }

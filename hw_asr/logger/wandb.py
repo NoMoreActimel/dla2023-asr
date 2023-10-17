@@ -19,7 +19,7 @@ class WanDBWriter:
 
             wandb.init(
                 project=config['trainer'].get('wandb_project'),
-                run=config['trainer'].get('wandb_run'),
+                name=config['trainer'].get('wandb_run_name'),
                 config=config.config
             )
             self.wandb = wandb
