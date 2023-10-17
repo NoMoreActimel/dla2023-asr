@@ -30,7 +30,7 @@ class BaseTrainer:
         self.model = model
         self.criterion = criterion
         self.metrics = metrics
-        self.rare_eval_metrics = rare_eval_metrics,
+        self.rare_eval_metrics = rare_eval_metrics
         self.n_epochs_frequency = n_epochs_frequency
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler

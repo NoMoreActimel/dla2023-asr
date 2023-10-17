@@ -129,7 +129,7 @@ class Trainer(BaseTrainer):
                 self.writer.add_scalar(
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
-                self._log_predictions(**batch)
+                self._log_predictions(**batch, log_rare_metrics=do_rare_eval)
                 self._log_spectrogram(batch["spectrogram"])
                 self._log_scalars(self.train_metrics)
                 # we don't want to reset train metrics at the start of every epoch
@@ -209,14 +209,14 @@ class Trainer(BaseTrainer):
                 )
             self.writer.set_step(epoch * self.len_epoch, part)
             self._log_scalars(self.evaluation_metrics)
-            self._log_predictions(**batch)
+            self._log_predictions(**batch, log_rare_metrics=do_rare_eval)
             self._log_spectrogram(batch["spectrogram"])
 
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
             self.writer.add_histogram(name, p, bins="auto")
         
-        return self.evaluation_metrics.result(), self.rare_eval_metrics if do_rare_eval else None
+        return self.evaluation_metrics.result(), self.rare_evaluation_metrics.result() if do_rare_eval else None
 
     def _progress(self, batch_idx):
         base = "[{}/{} ({:.0f}%)]"
@@ -235,6 +235,7 @@ class Trainer(BaseTrainer):
             log_probs_length,
             audio_path,
             examples_to_log=10,
+            log_rare_metrics=False,
             *args,
             **kwargs,
     ):
@@ -243,23 +244,30 @@ class Trainer(BaseTrainer):
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
         argmax_inds = [
             inds[: int(ind_len)]
-            for inds, ind_len in zip(argmax_inds, log_probs_length.numpy())
+            for inds, ind_len in zip(argmax_inds, log_probs_length.numpy())[:examples_to_log]
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
 
         if hasattr(self.text_encoder, "ctc_decode"):
-            argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
+            argmax_texts = [
+                self.text_encoder.ctc_decode(inds) 
+                for inds in argmax_inds[:examples_to_log]
+            ]
             beam_search_predictions = [
                 self.text_encoder.ctc_beam_search(torch.exp(log_probs_line), length)[0].text
-                for log_probs_line, length in zip(log_probs, log_probs_length)
-            ]
+                for log_probs_line, length in zip(log_probs, log_probs_length)[:examples_to_log]
+            ] if log_rare_metrics else None
+            # here we log predefined metrics, so
+            # we hardcoded beamsearch logging, as it was with argmax-texts
+            # each new rare-metric logging should be implemented the same way
         
         tuples = list(zip(text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
         for i, (target, raw_pred, audio_path) in enumerate(tuples[:examples_to_log]):
             if hasattr(self.text_encoder, "ctc_decode"):
-                pred, beam_search_pred = argmax_texts[i], beam_search_predictions[i]
+                pred = argmax_texts[i]
+                beam_search_pred = beam_search_predictions[i] if beam_search_predictions else None
 
             target = BaseTextEncoder.normalize_text(target)
             wer_raw = calc_wer(target, raw_pred) * 100
@@ -275,17 +283,20 @@ class Trainer(BaseTrainer):
             if hasattr(self.text_encoder, "ctc_decode"):
                 wer_argmax = calc_wer(target, pred) * 100
                 cer_argmax = calc_cer(target, pred) * 100
-
-                wer_beamsearch = calc_wer(target, beam_search_pred) * 100
-                cer_beamsearch = calc_cer(target, beam_search_pred) * 100
                 rows[Path(audio_path).name].update({
                     "predictions": pred,
                     "beam search prediction": beam_search_pred,
                     "wer argmax": wer_argmax,
                     "cer argmax": cer_argmax,
-                    "wer beamsearch": wer_beamsearch,
-                    "cer beamsearch": cer_beamsearch
                 })
+                
+                if log_rare_metrics:
+                    wer_beamsearch = calc_wer(target, beam_search_pred) * 100
+                    cer_beamsearch = calc_cer(target, beam_search_pred) * 100
+                    rows[Path(audio_path).name].update({
+                        "wer beamsearch": wer_beamsearch,
+                        "cer beamsearch": cer_beamsearch
+                    })
 
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 

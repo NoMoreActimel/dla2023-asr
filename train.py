@@ -49,7 +49,7 @@ def main(config):
         for metric_dict in config["metrics"]
     ]
 
-    if "rare_eval_metrics" in config:
+    if "rare_eval_metrics" in config.config:
         rare_eval_metrics = [
             config.init_obj(metric_dict, module_metric, text_encoder=text_encoder)
             for metric_dict in config["rare_eval_metrics"]["metrics"]
