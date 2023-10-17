@@ -244,7 +244,7 @@ class Trainer(BaseTrainer):
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
         argmax_inds = [
             inds[: int(ind_len)]
-            for inds, ind_len in zip(argmax_inds, log_probs_length.numpy())[:examples_to_log]
+            for inds, ind_len in list(zip(argmax_inds, log_probs_length.numpy()))[:examples_to_log]
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
 
@@ -255,7 +255,7 @@ class Trainer(BaseTrainer):
             ]
             beam_search_predictions = [
                 self.text_encoder.ctc_beam_search(torch.exp(log_probs_line), length)[0].text
-                for log_probs_line, length in zip(log_probs, log_probs_length)[:examples_to_log]
+                for log_probs_line, length in list(zip(log_probs, log_probs_length))[:examples_to_log]
             ] if log_rare_metrics else None
             # here we log predefined metrics, so
             # we hardcoded beamsearch logging, as it was with argmax-texts
