@@ -207,7 +207,6 @@ class Trainer(BaseTrainer):
             *args,
             **kwargs,
     ):
-        # TODO: implement logging of beam search results
         if self.writer is None:
             return
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
@@ -216,30 +215,49 @@ class Trainer(BaseTrainer):
             for inds, ind_len in zip(argmax_inds, log_probs_length.numpy())
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
-        argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        beam_search_texts = [
-            self.text_encoder.ctc_beam_search(
-                probs=torch.exp(log_probs_line), probs_length=length,
-                beam_size=100
-            )
-            for log_probs_line, length in zip(log_probs, log_probs_length)
-        ]
-        tuples = list(zip(argmax_texts, beam_search_texts, text, argmax_texts_raw, audio_path))
+
+        if hasattr(self.text_encoder, "ctc_decode"):
+            argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
+            beam_search_predictions = [
+                self.text_encoder.ctc_beam_search(
+                    probs=torch.exp(log_probs_line), probs_length=length
+                )[0].text
+                for log_probs_line, length in zip(log_probs, log_probs_length)
+            ]
+        
+        tuples = list(zip(text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
-        for pred, beam_search_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+        for i, (target, raw_pred, audio_path) in enumerate(tuples[:examples_to_log]):
+            if hasattr(self.text_encoder, "ctc_decode"):
+                pred, beam_search_pred = argmax_texts[i], beam_search_predictions[i]
+
             target = BaseTextEncoder.normalize_text(target)
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
+            wer_raw = calc_wer(target, raw_pred) * 100
+            cer_raw = calc_cer(target, raw_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
                 "raw prediction": raw_pred,
-                "predictions": pred,
-                "beam search prediction": beam_search_pred,
-                "wer": wer,
-                "cer": cer,
+                "wer raw": wer_raw,
+                "cer raw": cer_raw,
             }
+
+            if hasattr(self.text_encoder, "ctc_decode"):
+                wer_argmax = calc_wer(target, pred) * 100
+                cer_argmax = calc_cer(target, pred) * 100
+
+                wer_beamsearch = calc_wer(target, beam_search_pred) * 100
+                cer_beamsearch = calc_cer(target, beam_search_pred) * 100
+                rows[Path(audio_path).name].update({
+                    "predictions": pred,
+                    "beam search prediction": beam_search_pred,
+                    "wer argmax": wer_argmax,
+                    "cer argmax": cer_argmax,
+                    "wer beamsearch": wer_beamsearch,
+                    "cer beamsearch": cer_beamsearch
+                })
+
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 
     def _log_spectrogram(self, spectrogram_batch):

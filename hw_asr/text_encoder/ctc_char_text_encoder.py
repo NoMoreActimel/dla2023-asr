@@ -12,7 +12,7 @@ class Hypothesis(NamedTuple):
 
 
 class CTCCharTextEncoder(CharTextEncoder):
-    def __init__(self, alphabet: List[str] = None, beam_size=100):
+    def __init__(self, alphabet: List[str] = None, beam_size=2):
         super().__init__(alphabet)
         self.beam_size = beam_size
         self.EMPTY_TOK = "^"
