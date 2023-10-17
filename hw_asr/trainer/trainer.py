@@ -219,9 +219,7 @@ class Trainer(BaseTrainer):
         if hasattr(self.text_encoder, "ctc_decode"):
             argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
             beam_search_predictions = [
-                self.text_encoder.ctc_beam_search(
-                    probs=torch.exp(log_probs_line), probs_length=length
-                )[0].text
+                self.text_encoder.ctc_beam_search(torch.exp(log_probs_line), length)[0].text
                 for log_probs_line, length in zip(log_probs, log_probs_length)
             ]
         
