@@ -12,8 +12,9 @@ class Hypothesis(NamedTuple):
 
 
 class CTCCharTextEncoder(CharTextEncoder):
-    def __init__(self, alphabet: List[str] = None):
+    def __init__(self, alphabet: List[str] = None, beam_size=100):
         super().__init__(alphabet)
+        self.beam_size = beam_size
         self.EMPTY_TOK = "^"
         self.EMPTY_IND = 0
         vocab = [self.EMPTY_TOK] + list(self.alphabet)
@@ -53,7 +54,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         return dict(sorted_stats_list[:beam_size])
 
     def ctc_beam_search(self, probs: torch.tensor, probs_length,
-                        beam_size: int = 100) -> List[Hypothesis]:
+                        beam_size: int = None) -> List[Hypothesis]:
         """
         Performs beam search and returns a list of pairs (hypothesis, hypothesis probability).
         """
@@ -61,11 +62,13 @@ class CTCCharTextEncoder(CharTextEncoder):
         char_length, voc_size = probs.shape
         assert voc_size == len(self.ind2char)
         hypos: List[Hypothesis] = []
+        if beam_size is None:
+            beam_size = self.beam_size
 
         # state[prefix, last_char] = prefix_prob
         state = {('', self.EMPTY_TOK): 1.0}
 
-        for frame in probs:
+        for frame in probs[:probs_length]:
             state = self._extend_and_merge(frame, state)
             state = self._truncate(state, beam_size)
         

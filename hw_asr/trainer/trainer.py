@@ -217,10 +217,17 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
+        beam_search_texts = [
+            self.text_encoder.ctc_beam_search(
+                probs=torch.exp(log_probs_line), probs_length=length,
+                beam_size=100
+            )
+            for log_probs_line, length in zip(log_probs, log_probs_length)
+        ]
+        tuples = list(zip(argmax_texts, beam_search_texts, text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
-        for pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+        for pred, beam_search_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
             wer = calc_wer(target, pred) * 100
             cer = calc_cer(target, pred) * 100
@@ -229,6 +236,7 @@ class Trainer(BaseTrainer):
                 "target": target,
                 "raw prediction": raw_pred,
                 "predictions": pred,
+                "beam search prediction": beam_search_pred,
                 "wer": wer,
                 "cer": cer,
             }
