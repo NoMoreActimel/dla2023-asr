@@ -30,9 +30,10 @@ class ArgmaxCERMetric(BaseMetric):
 
 
 class BeamsearchCERMetric(BaseMetric):
-    def __init__(self, text_encoder: BaseTextEncoder, *args, **kwargs):
+    def __init__(self, text_encoder: BaseTextEncoder, compute_on_train=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text_encoder = text_encoder
+        self.compute_on_train = compute_on_train
         assert hasattr(self.text_encoder, "ctc_beam_search"), "Incompatible text encoder, ctc_beam_search is needed"
 
     def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
@@ -43,7 +44,7 @@ class BeamsearchCERMetric(BaseMetric):
             for log_prob, length in zip(log_probs, log_probs_length)
         ])
         lengths = log_probs_length.detach().numpy()
-        
+
         for pred_text, length, target_text in zip(predicted_texts, lengths, text):
             target_text = BaseTextEncoder.normalize_text(target_text)
             cers.append(calc_cer(target_text, pred_text))

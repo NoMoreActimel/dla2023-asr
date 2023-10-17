@@ -52,11 +52,17 @@ class Trainer(BaseTrainer):
         self.log_step = 50
 
         self.train_metrics = MetricTracker(
-            "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
+            "loss", "grad norm", *[m.name for m in self.metrics if self._compute_on_train(m)], writer=self.writer
         )
         self.evaluation_metrics = MetricTracker(
             "loss", *[m.name for m in self.metrics], writer=self.writer
         )
+
+    @staticmethod
+    def _compute_on_train(metric):
+        if hasattr(metric, "compute_on_train"):
+            return metric.compute_on_train
+        return True
 
     @staticmethod
     def move_batch_to_device(batch, device: torch.device):

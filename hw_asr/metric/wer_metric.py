@@ -3,6 +3,8 @@ from typing import List
 import torch
 from torch import Tensor
 
+import numpy as np
+
 from hw_asr.base.base_metric import BaseMetric
 from hw_asr.base.base_text_encoder import BaseTextEncoder
 from hw_asr.metric.utils import calc_wer
@@ -28,9 +30,10 @@ class ArgmaxWERMetric(BaseMetric):
 
 
 class BeamsearchWERMetric(BaseMetric):
-    def __init__(self, text_encoder: BaseTextEncoder, *args, **kwargs):
+    def __init__(self, text_encoder: BaseTextEncoder, compute_on_train=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text_encoder = text_encoder
+        self.compute_on_train = compute_on_train
         assert hasattr(self.text_encoder, "ctc_beam_search"), "Incompatible text encoder, ctc_beam_search is needed"
 
     def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
