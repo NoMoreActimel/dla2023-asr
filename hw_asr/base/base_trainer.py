@@ -69,7 +69,7 @@ class BaseTrainer:
             self._resume_checkpoint(config.resume)
 
     @abstractmethod
-    def _train_epoch(self, epoch):
+    def _train_epoch(self, epoch, do_rare_eval):
         """
         Training logic for an epoch
 
@@ -92,7 +92,8 @@ class BaseTrainer:
         not_improved_count = 0
         for epoch in range(self.start_epoch, self.epochs + 1):
             self._last_epoch = epoch
-            result = self._train_epoch(epoch)
+            do_rare_eval = self.n_epochs_frequency and epoch % self.n_epochs_frequency == 0
+            result = self._train_epoch(epoch, do_rare_eval)
 
             # save logged informations into log dict
             log = {"epoch": epoch}
@@ -138,10 +139,6 @@ class BaseTrainer:
                         "Training stops.".format(self.early_stop)
                     )
                     break
-            
-            if self.n_epochs_frequency and epoch % self.n_epochs_frequency == 0:
-                
-
 
             if epoch % self.save_period == 0 or best:
                 self._save_checkpoint(epoch, save_best=best, only_best=True)
