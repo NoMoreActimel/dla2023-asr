@@ -46,7 +46,7 @@ class DeepSpeech2RNNLayer(nn.Module):
         input = input.transpose(1, 2)
 
         # BatchNorm1d is applied on the Freq dim of prev-layer outputs
-        output = self.activation(self.batchnorm1d(output))
+        output = self.activation(self.batchnorm1d(input))
 
         # output: Batch x Freq x Time -> Batch x Time x Freq
         output = output.transpose(1, 2)
