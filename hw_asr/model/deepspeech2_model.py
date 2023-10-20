@@ -64,14 +64,14 @@ class DeepSpeech2Model(BaseModel):
         rnn_input_size = int(np.floor(rnn_input_size)) + 1
         rnn_input_size = rnn_input_size * self.conv2d.output_channels
 
-        self.rnns = nn.Sequential(*[
+        self.rnns = [
             DeepSpeech2RNNLayer(
                 input_size=rnn_input_size if i == 0 else 2 * rnn_hidden_size,  # bidirectional => 2 * hidden_dim
                 hidden_size=rnn_hidden_size,
                 rnn_type=rnn_type,
                 dropout_prob=rnn_dropout_prob
             ) for i in range(n_rnn_layers)
-        ])
+        ]
 
         self.fc = nn.Linear(rnn_input_size, n_class)
 
@@ -81,7 +81,8 @@ class DeepSpeech2Model(BaseModel):
         input_lengths = batch["spectrogram_length"]
 
         output, output_lengths = self.conv2d(input, input_lengths)
-        output, output_lengths = self.rnns(output, output_lengths)
+        for rnn in self.rnns:
+            output, output_lengths = self.rnns(output, output_lengths)
         output = self.fc(output)
 
         return {'logits': output}
@@ -93,7 +94,7 @@ class DeepSpeech2Model(BaseModel):
         for layer in self.conv2d.layers:
             if isinstance(layer, nn.Conv2d):    
                 output_lengths = (
-                    output_lengths.float() + (2 * self.conv2d.padding[1] - self.conv2d.kernel_size[1] - 2)
+                    output_lengths.float() + 2 * self.conv2d.padding[1] - self.conv2d.kernel_size[1]
                 ) / self.conv2d.stride[1]
 
         return output_lengths

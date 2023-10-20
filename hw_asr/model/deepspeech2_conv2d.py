@@ -30,7 +30,7 @@ class DeepSpeech2Conv2d(nn.Module):
         self.output_channels = output_channels
         
         self.relu_clipping_threshold = relu_clipping_threshold
-        self.padding = (kernel_size[0] - 1) / stride[0], (kernel_size[1] - 1) / stride[1]
+        self.padding = int((kernel_size[0] - 1) / stride[0]), int((kernel_size[1] - 1) / stride[1])
         self.stride = stride
         self.kernel_size = kernel_size
 
@@ -61,8 +61,8 @@ class DeepSpeech2Conv2d(nn.Module):
             if isinstance(layer, nn.Conv2d):
                 output_lengths = (output_lengths.float() + (2 * self.padding[1] - self.kernel_size[1] - 2)) / self.stride[1]
                 output_lengths = output_lengths.int() + 1
-                for sample, length in zip(output, output_lengths):
-                    sample[length:, :] = 0.
+                for i, length in enumerate(output_lengths):
+                    output[i, length:, :] = 0.
         
         # output: Batch x OutputChannels x TransformedFreq x Time -> Batch x Time x Freq
         # Freq = OutputChannels * TransformedFreq
