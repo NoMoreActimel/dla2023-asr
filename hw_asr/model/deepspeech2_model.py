@@ -9,7 +9,7 @@ from hw_asr.model.deepspeech2_rnn_layer import DeepSpeech2RNNLayer
 class DeepSpeech2Model(BaseModel):
     def __init__(
             self,
-            sample_rate,
+            n_feats,
             n_class,
             mel_spectrogram=True,
             conv2d_input_channels=1,
@@ -28,7 +28,7 @@ class DeepSpeech2Model(BaseModel):
             This model classifies audio samples by log-spectrogram
             Expected input shape is Batch x Time x Freq
             :params:
-            sample_rate: number of frequencies - length by Freq axis
+            n_feats: number of frequencies - length by Freq axis
             n_class: number of classes
             mel_spectrogram: whether the input is mel-spectrogram or not, bool
             conv2d_input_channels: number of input channels
@@ -58,19 +58,19 @@ class DeepSpeech2Model(BaseModel):
             relu_clipping_threshold=conv2d_relu_clipping_threshold
         )
 
-        self.sample_rate = sample_rate
+        self.input_size = n_feats
         self.mel_spectrogram = mel_spectrogram
-        rnn_input_size = (self.sample_rate * self.conv2d.kernel_size[0]) / self.conv2d.stride[0]
+        rnn_input_size = (self.input_size * self.conv2d.kernel_size[0]) / self.conv2d.stride[0]
         rnn_input_size = int(np.floor(rnn_input_size)) + 1
         rnn_input_size = rnn_input_size * self.conv2d.output_channels
 
         self.rnns = nn.Sequential([
             DeepSpeech2RNNLayer(
-                input_size=rnn_input_size,
+                input_size=rnn_input_size if i == 0 else 2 * rnn_hidden_size,  # bidirectional => 2 * hidden_dim
                 hidden_size=rnn_hidden_size,
                 rnn_type=rnn_type,
                 dropout_prob=rnn_dropout_prob
-            ) for _ in range(n_rnn_layers)
+            ) for i in range(n_rnn_layers)
         ])
 
         self.fc = nn.Linear(rnn_input_size, n_class)

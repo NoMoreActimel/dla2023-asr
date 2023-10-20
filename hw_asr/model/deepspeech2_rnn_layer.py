@@ -8,7 +8,7 @@ class DeepSpeech2RNNLayer(nn.Module):
             input_size,
             hidden_size=512,
             dropout_prob=0.1,
-            rnn_type='RNN'
+            rnn_type='LSTM'
     ):
         """
             Implementation of DeepSpeech2 1 Recurrent Neural Network layer
@@ -29,6 +29,7 @@ class DeepSpeech2RNNLayer(nn.Module):
         self.batchnorm1d = nn.BatchNorm1d(input_size)
         self.dropout_prob = dropout_prob
 
+        print(f'rnn layer init started, input_size={input_size}')
         rnn_class = nn.RNN if self.rnn_type == 'RNN' else (nn.LSTM if self.rnn_type == 'LSTM' else nn.GRU)
         self.rnn = rnn_class(
             input_size=input_size,

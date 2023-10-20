@@ -17,7 +17,9 @@
   "arch": {
     "type": "DeepSpeech2Model",
     "args": {
-      "mel_spectrogram": true
+      "n_feats": 128,
+      "mel_spectrogram": true,
+      "rnn_hidden_size": 256
     }
   },
   "data": {
