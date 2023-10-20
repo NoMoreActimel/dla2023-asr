@@ -84,17 +84,17 @@ class DeepSpeech2Model(BaseModel):
     def forward(self, spectrogram, **batch):
         input = torch.log(spectrogram) if not self.mel_spectrogram else spectrogram
         input_lengths = batch["spectrogram_length"]
-        print(f'Initial input shape: {input.shape}')
+        print(f'\nInitial input shape : Batch x Freq x Time : {input.shape}')
 
         output, output_lengths = self.conv2d(input, input_lengths)
-        print(f'Shape after Conv2d: {output.shape}')
+        print(f'Shape after Conv2d : Batch x Freq x Time : {output.shape}')
 
         for i, rnn in enumerate(self.rnns):
             output, output_lengths = rnn(output, output_lengths)
-            print(f'Shape after {i+1}-th RNN layer: {output.shape}')
+            print(f'Shape after {i+1}-th RNN layer : Batch x Freq x Time : {output.shape}')
 
         output = self.fc(output)
-        print(f'Shape after FC Linear layer: {output.shape}')
+        print(f'Shape after FC Linear layer : Batch x Time x Classes {output.shape}')
 
         return {'logits': output}
 
@@ -105,7 +105,7 @@ class DeepSpeech2Model(BaseModel):
         for layer in self.conv2d.layers:
             if isinstance(layer, nn.Conv2d):    
                 output_lengths = (
-                    output_lengths.float() + 2 * self.conv2d.padding[1] - self.conv2d.kernel_size[1]
-                ) / self.conv2d.stride[1]
+                    output_lengths + 2 * self.conv2d.padding[1] - self.conv2d.kernel_size[1]
+                ) // self.conv2d.stride[1] + 1
 
         return output_lengths
