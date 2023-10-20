@@ -37,7 +37,7 @@ def main(config):
         config["arch"],
         module_arch,
         n_class=len(text_encoder),
-        sample_rate=text_encoder.config["preprocessing"]["sr"]
+        sample_rate=config["preprocessing"]["sr"]
     )
     logger.info(model)
 
