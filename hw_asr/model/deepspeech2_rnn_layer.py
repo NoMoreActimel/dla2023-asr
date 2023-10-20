@@ -49,8 +49,8 @@ class DeepSpeech2RNNLayer(nn.Module):
         # output: Batch x Freq x Time -> Batch x Time x Freq
         output = output.transpose(1, 2)
 
-        input = pack_padded_sequence(input, input_lengths, batch_first=True, enforce_sorted=False)
-        output, output_lengths = self.rnn(input)
+        output = pack_padded_sequence(output, input_lengths, batch_first=True, enforce_sorted=False)
+        output, output_lengths = self.rnn(output)
         output, output_lengths = pad_packed_sequence(output, total_length=input.shape[-1], batch_first=True)
         
         output = output.transpose(1, 2)

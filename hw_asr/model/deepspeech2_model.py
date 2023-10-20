@@ -60,9 +60,13 @@ class DeepSpeech2Model(BaseModel):
 
         self.input_size = n_feats
         self.mel_spectrogram = mel_spectrogram
+
         rnn_input_size = (self.input_size + 2 * self.conv2d.padding[0] - self.conv2d.kernel_size[0]) / self.conv2d.stride[0]
         rnn_input_size = int(np.floor(rnn_input_size)) + 1
         rnn_input_size = rnn_input_size * self.conv2d.output_channels
+
+        self.rnn_input_size = rnn_input_size
+        self.rnn_hidden_size = rnn_hidden_size
 
         print(f'rnn_input_size: {rnn_input_size}, rnn_hidden_size={rnn_hidden_size}')
         self.rnns = nn.ModuleList([
@@ -74,17 +78,23 @@ class DeepSpeech2Model(BaseModel):
             ) for i in range(n_rnn_layers)
         ])
 
-        self.fc = nn.Linear(rnn_input_size, n_class)
+        self.fc = nn.Linear(2 * rnn_hidden_size, n_class)
 
 
     def forward(self, spectrogram, **batch):
         input = torch.log(spectrogram) if not self.mel_spectrogram else spectrogram
         input_lengths = batch["spectrogram_length"]
+        print(f'Initial input shape: {input.shape}')
 
         output, output_lengths = self.conv2d(input, input_lengths)
-        for rnn in self.rnns:
+        print(f'Shape after Conv2d: {output.shape}')
+
+        for i, rnn in enumerate(self.rnns):
             output, output_lengths = rnn(output, output_lengths)
+            print(f'Shape after {i+1}-th RNN layer: {output.shape}')
+
         output = self.fc(output)
+        print(f'Shape after FC Linear layer: {output.shape}')
 
         return {'logits': output}
 
