@@ -42,9 +42,7 @@ class DeepSpeech2RNNLayer(nn.Module):
         )
         
     def forward(self, input, input_lengths):
-        # input: Batch x Time x Freq -> Batch x Freq x Time
-        input = input.transpose(1, 2)
-
+        # input: Batch x Freq x Time
         # BatchNorm1d is applied on the Freq dim of prev-layer outputs
         output = self.activation(self.batchnorm1d(input))
 
@@ -55,4 +53,6 @@ class DeepSpeech2RNNLayer(nn.Module):
         output, output_lengths = self.rnn(input)
         output, output_lengths = pad_packed_sequence(output, total_length=input.shape[-1], batch_first=True)
         
+        output = output.transpose(1, 2)
+        # output: Batch x Freq x Times
         return output, output_lengths

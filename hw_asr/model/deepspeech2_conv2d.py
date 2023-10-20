@@ -48,10 +48,8 @@ class DeepSpeech2Conv2d(nn.Module):
         )
         
     def forward(self, input, input_lengths):
-        # input: Batch x Time x Freq -> Batch x InputChannels x Freq x Time
-        input = input.transpose(1, 2).unsqueeze(1)
-
-        output = input
+        # input: Batch x Freq x Time -> Batch x InputChannels x Freq x Time
+        output = input.unsqueeze(1)
         output_lengths = input_lengths
 
         for layer in self.layers:
@@ -64,8 +62,8 @@ class DeepSpeech2Conv2d(nn.Module):
                 for i, length in enumerate(output_lengths):
                     output[i, length:, :] = 0.
         
-        # output: Batch x OutputChannels x TransformedFreq x Time -> Batch x Time x Freq
+        # output: Batch x OutputChannels x TransformedFreq x Time -> Batch x Freq x Time
         # Freq = OutputChannels * TransformedFreq
         B, C, F, T = output.shape
-        output = output.view(B, C * F, T).transpose(1, 2)
+        output = output.view(B, C * F, T)
         return output, output_lengths
