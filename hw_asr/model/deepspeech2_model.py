@@ -77,8 +77,7 @@ class DeepSpeech2Model(BaseModel):
 
 
     def forward(self, spectrogram, **batch):
-        if not self.mel_spectrogram:
-            input = torch.log(spectrogram)
+        input = torch.log(spectrogram) if not self.mel_spectrogram else spectrogram
         input_lengths = batch["spectrogram_length"]
 
         output, output_lengths = self.conv2d(input, input_lengths)
