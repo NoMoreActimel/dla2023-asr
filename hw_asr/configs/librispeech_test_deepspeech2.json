@@ -1,5 +1,5 @@
 {
-  "name": "default_config",
+  "name": "librispeech_deepspeech2_default_config",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,
@@ -15,15 +15,16 @@
     "spectrogram": []
   },
   "arch": {
-    "type": "BaselineModel",
+    "type": "DeepSpeech2Model",
     "args": {
       "n_feats": 128,
-      "fc_hidden": 512
+      "mel_spectrogram": true,
+      "rnn_hidden_size": 256
     }
   },
   "data": {
     "train": {
-      "batch_size": 50,
+      "batch_size": 24,
       "num_workers": 5,
       "datasets": [
         {
@@ -53,7 +54,7 @@
       ]
     },
     "val": {
-      "batch_size": 30,
+      "batch_size": 24,
       "num_workers": 5,
       "datasets": [
         {
@@ -65,7 +66,7 @@
       ]
     },
     "test-other": {
-      "batch_size": 30,
+      "batch_size": 24,
       "num_workers": 5,
       "datasets": [
         {
@@ -77,7 +78,7 @@
       ]
     },
     "test-clean": {
-      "batch_size": 30,
+      "batch_size": 24,
       "num_workers": 5,
       "datasets": [
         {
@@ -113,6 +114,23 @@
       }
     }
   ],
+  "rare_eval_metrics": {
+    "n_epochs_frequency": 10,
+    "metrics": [
+      {
+        "type": "BeamsearchWERMetric",
+        "args": {
+          "name": "WER (beamsearch)"
+        }
+      },
+      {
+        "type": "BeamsearchCERMetric",
+        "args": {
+          "name": "CER (beamsearch)"
+        }
+      }
+    ]
+  },
   "lr_scheduler": {
     "type": "OneCycleLR",
     "args": {
@@ -132,6 +150,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
+    "wandb_run_name": "librispeech_deepspeech2_test",
     "len_epoch": 100,
     "grad_norm_clip": 10
   }
