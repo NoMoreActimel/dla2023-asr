@@ -21,6 +21,7 @@ class DeepSpeech2Model(BaseModel):
             n_rnn_layers=5,
             rnn_hidden_size=512,
             rnn_dropout_prob=0.1,
+            verbose=False,
             **batch
     ):
         """
@@ -43,6 +44,7 @@ class DeepSpeech2Model(BaseModel):
             n_rnn_layers: number of RNN layers in final model
             rnn_hidden_size: size of hidden (freq) dimension in RNN layers
             rnn_dropout_prob: dropout probability in RNN layers
+            verbose: debug parameter, whether to print shapes after each layer or no
         """
         super().__init__()
         # input -> 
@@ -79,22 +81,23 @@ class DeepSpeech2Model(BaseModel):
         ])
 
         self.fc = nn.Linear(2 * rnn_hidden_size, n_class)
+        self.verbose = verbose
 
 
     def forward(self, spectrogram, **batch):
         input = torch.log(spectrogram) if not self.mel_spectrogram else spectrogram
         input_lengths = batch["spectrogram_length"]
-        print(f'\nInitial input shape : Batch x Freq x Time : {input.shape}')
+        if self.verbose: print(f'\nInitial input shape : Batch x Freq x Time : {input.shape}')
 
         output, output_lengths = self.conv2d(input, input_lengths)
-        print(f'Shape after Conv2d : Batch x Freq x Time : {output.shape}')
+        if self.verbose: print(f'Shape after Conv2d : Batch x Freq x Time : {output.shape}')
 
         for i, rnn in enumerate(self.rnns):
             output, output_lengths = rnn(output, output_lengths)
-            print(f'Shape after {i+1}-th RNN layer : Batch x Freq x Time : {output.shape}')
+            if self.verbose: print(f'Shape after {i+1}-th RNN layer : Batch x Freq x Time : {output.shape}')
 
-        output = self.fc(output)
-        print(f'Shape after FC Linear layer : Batch x Time x Classes {output.shape}')
+        output = self.fc(output.transpose(1, 2))
+        if self.verbose: print(f'Shape after FC Linear layer : Batch x Time x Classes {output.shape}')
 
         return {'logits': output}
 
