@@ -64,7 +64,7 @@ class DeepSpeech2Model(BaseModel):
         rnn_input_size = int(np.floor(rnn_input_size)) + 1
         rnn_input_size = rnn_input_size * self.conv2d.output_channels
 
-        self.rnns = nn.Sequential([
+        self.rnns = nn.Sequential(*[
             DeepSpeech2RNNLayer(
                 input_size=rnn_input_size if i == 0 else 2 * rnn_hidden_size,  # bidirectional => 2 * hidden_dim
                 hidden_size=rnn_hidden_size,
@@ -76,9 +76,10 @@ class DeepSpeech2Model(BaseModel):
         self.fc = nn.Linear(rnn_input_size, n_class)
 
 
-    def forward(self, spectrogram, input_lengths, **batch):
+    def forward(self, spectrogram, **batch):
         if not self.mel_spectrogram:
             input = torch.log(spectrogram)
+        input_lengths = batch["spectrogram_length"]
 
         output, output_lengths = self.conv2d(input, input_lengths)
         output, output_lengths = self.rnns(output, output_lengths)
