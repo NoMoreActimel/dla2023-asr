@@ -1,5 +1,5 @@
 {
-  "name": "one_batch_test",
+  "name": "one_batch_test_deepspeech2",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,
@@ -15,10 +15,8 @@
     "spectrogram": []
   },
   "arch": {
-    "type": "BaselineModel",
+    "type": "DeepSpeech2Model",
     "args": {
-      "n_feats": 128,
-      "fc_hidden": 512
     }
   },
   "data": {
@@ -96,7 +94,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "asr_project",
-    "wandb_run_name": "one_batch_test",
+    "wandb_run_name": "one_batch_test_deepspeech2",
     "len_epoch": 100,
     "grad_norm_clip": 10
   }
