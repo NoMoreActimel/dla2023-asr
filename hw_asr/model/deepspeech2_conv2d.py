@@ -34,7 +34,7 @@ class DeepSpeech2Conv2d(nn.Module):
         self.stride = stride
         self.kernel_size = kernel_size
 
-        self.seq = nn.Seq(
+        self.layers = nn.Seq(
             nn.Conv2d(
                 input_channels,
                 output_channels,
@@ -54,7 +54,7 @@ class DeepSpeech2Conv2d(nn.Module):
         output = input
         output_lengths = input_lengths
 
-        for layer in self.seq:
+        for layer in self.layers:
             output = layer(output)
 
             # we need to apply masking by Time axis 

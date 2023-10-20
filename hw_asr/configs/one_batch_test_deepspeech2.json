@@ -17,6 +17,7 @@
   "arch": {
     "type": "DeepSpeech2Model",
     "args": {
+      "mel_spectrogram": true
     }
   },
   "data": {

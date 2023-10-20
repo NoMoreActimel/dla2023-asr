@@ -15,7 +15,7 @@ class DeepSpeech2RNNLayer(nn.Module):
             Along with sequence-wise BatchNorm, as mentioned in the paper
             Supported types of RNNs: RNN, GRU, LSTM
             :params:
-            input_size: input length by Time axis, where input: Batch x Time x Freq
+            input_size: input length by Freq axis, where input: Batch x Time x Freq
             type: 'RNN', 'LSTM' or 'GRU' - which RNN architecture to use
             hidden_size: size of hidden (freq) dimension in the RNN
             dropout_prob: probability of dropout after RNN layer

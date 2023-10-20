@@ -33,7 +33,12 @@ def main(config):
     dataloaders = get_dataloaders(config, text_encoder)
 
     # build model architecture, then print to console
-    model = config.init_obj(config["arch"], module_arch, n_class=len(text_encoder))
+    model = config.init_obj(
+        config["arch"],
+        module_arch,
+        n_class=len(text_encoder),
+        sample_rate=text_encoder.config["preprocessing"]["sr"]
+    )
     logger.info(model)
 
     # prepare for (multi-device) GPU training
