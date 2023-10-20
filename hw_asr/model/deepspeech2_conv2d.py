@@ -34,7 +34,7 @@ class DeepSpeech2Conv2d(nn.Module):
         self.stride = stride
         self.kernel_size = kernel_size
 
-        self.layers = nn.Seq(
+        self.layers = nn.Sequential(
             nn.Conv2d(
                 input_channels,
                 output_channels,
