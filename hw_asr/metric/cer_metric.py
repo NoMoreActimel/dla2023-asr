@@ -39,13 +39,18 @@ class BeamsearchCERMetric(BaseMetric):
     def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
         cers = []
 
-        predicted_texts = np.array([
-            self.text_encoder.ctc_beam_search(torch.exp(log_prob), length)[0].text
-            for log_prob, length in zip(log_probs, log_probs_length)
-        ])
-        lengths = log_probs_length.detach().numpy()
+        log_probs = log_probs.detach().cpu()
+        log_probs_length = log_probs_length.detach().cpu().numpy()
 
-        for pred_text, length, target_text in zip(predicted_texts, lengths, text):
+        if self.text_encoder.use_lm:
+            predicted_texts = self.text_encoder(log_probs, log_probs_length)
+        else:
+            predicted_texts = np.array([
+                self.text_encoder.ctc_beam_search(log_prob, length)[0].text
+                for log_prob, length in zip(log_probs, log_probs_length)
+            ])
+            
+        for pred_text, target_text in zip(predicted_texts, text):
             target_text = BaseTextEncoder.normalize_text(target_text)
             cers.append(calc_cer(target_text, pred_text))
 

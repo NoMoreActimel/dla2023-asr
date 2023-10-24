@@ -1,9 +1,12 @@
 from typing import List, NamedTuple
 from collections import defaultdict
+from pyctcdecode import build_ctcdecoder
 
+import multiprocessing
 import torch
 
 from .char_text_encoder import CharTextEncoder
+from hw_asr.utils import ROOT_PATH
 
 
 class Hypothesis(NamedTuple):
@@ -12,7 +15,12 @@ class Hypothesis(NamedTuple):
 
 
 class CTCCharTextEncoder(CharTextEncoder):
-    def __init__(self, alphabet: List[str] = None, beam_size=2):
+    def __init__(
+            self,
+            alphabet: List[str] = None,
+            beam_size=2,
+            use_lm=False
+    ):
         super().__init__(alphabet)
         self.beam_size = beam_size
         self.EMPTY_TOK = "^"
@@ -20,6 +28,19 @@ class CTCCharTextEncoder(CharTextEncoder):
         vocab = [self.EMPTY_TOK] + list(self.alphabet)
         self.ind2char = dict(enumerate(vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
+        self.use_lm = use_lm
+
+        if use_lm:
+            KENLM_PATH = ROOT_PATH / "data/librispeech-lm/4-gram.arpa"
+
+            # https://github.com/kensho-technologies/pyctcdecode
+            # https://github.com/kensho-technologies/pyctcdecode/blob/main/tutorials/03_eval_performance.ipynb
+            self.lm_ctcdecoder = build_ctcdecoder(
+                labels=[""] + list(self.alphabet),
+                kenlm_model_path=KENLM_PATH,
+                alpha=0.7,
+                beta=3.0,
+            )
 
     def ctc_decode(self, inds: List[int]) -> str:
         result = []
@@ -61,6 +82,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         assert len(probs.shape) == 2
         char_length, voc_size = probs.shape
         assert voc_size == len(self.ind2char)
+
         hypos: List[Hypothesis] = []
         if beam_size is None:
             beam_size = self.beam_size
@@ -76,3 +98,18 @@ class CTCCharTextEncoder(CharTextEncoder):
             hypos.append(Hypothesis(text=prefix, prob=prefix_prob))
         
         return sorted(hypos, key=lambda x: x.prob, reverse=True)
+
+
+    def ctc_lm_beam_search(self, probs, probs_length, beam_size: int = None) -> List[Hypothesis]:
+        assert len(probs.shape) == 2
+
+        if beam_size is None:
+            beam_size = self.beam_size
+        
+        probs = probs[:probs_length]
+        probs = [prob.numpy() for prob in probs]
+        
+        with multiprocessing.get_context("fork").Pool() as pool:
+            predicts = self.lm_ctcdecoder.decode_batch(pool, probs, beam_width=beam_size)
+        
+        return predicts

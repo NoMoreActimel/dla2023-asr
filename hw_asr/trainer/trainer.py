@@ -241,22 +241,31 @@ class Trainer(BaseTrainer):
     ):
         if self.writer is None:
             return
-        argmax_inds = log_probs.cpu().argmax(-1).numpy()
+        
+        log_probs = log_probs[:examples_to_log].detach().cpu()
+        log_probs_length = log_probs_length[:examples_to_log].detach().cpu().numpy()
+
+        argmax_inds = log_probs.argmax(-1).numpy()
         argmax_inds = [
             inds[: int(ind_len)]
-            for inds, ind_len in list(zip(argmax_inds, log_probs_length.numpy()))[:examples_to_log]
+            for inds, ind_len in list(zip(argmax_inds, log_probs_length))
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
 
         if hasattr(self.text_encoder, "ctc_decode"):
             argmax_texts = [
                 self.text_encoder.ctc_decode(inds) 
-                for inds in argmax_inds[:examples_to_log]
+                for inds in argmax_inds
             ]
-            beam_search_predictions = [
-                self.text_encoder.ctc_beam_search(torch.exp(log_probs_line), length)[0].text
-                for log_probs_line, length in list(zip(log_probs, log_probs_length))[:examples_to_log]
-            ] if log_rare_metrics else None
+            if self.text_encoder.use_lm:
+                beam_search_predictions = self.text_encoder.ctc_lm_beam_search(
+                    log_probs, log_probs_length
+                ) if log_rare_metrics else None
+            else:
+                beam_search_predictions = [
+                    self.text_encoder.ctc_beam_search(log_probs_line, length)[0].text
+                    for log_probs_line, length in list(zip(log_probs, log_probs_length))
+                ] if log_rare_metrics else None
             # here we log predefined metrics, so
             # we hardcoded beamsearch logging, as it was with argmax-texts
             # each new rare-metric logging should be implemented the same way
