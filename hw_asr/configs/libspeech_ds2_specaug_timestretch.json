@@ -14,18 +14,25 @@
     "wave": [],
     "spectrogram": [
       {
-        "type": "FreqTimeMaskingSpecAug",
+        "type": "FreqMaskingSpecAug",
         "args": {
-          "max_freq_mask": 20,
+          "prob": 0.4,
+          "max_freq_mask": 20
+        }
+      },
+      {
+        "type": "TimeMaskingSpecAug",
+        "args": {
+          "prob": 0.4,
           "max_time_mask": 100
         }
       },
       {
         "type": "TimeStretchSpecAug",
         "args": {
+          "prob": 0.4,
           "stretch_min": 0.8,
           "stretch_max": 1.2,
-          "n_stretcn": 3,
           "n_freq": 128
         }
       }
