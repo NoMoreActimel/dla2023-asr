@@ -6,9 +6,9 @@ from torch import nn
 from hw_asr.augmentations.base import AugmentationBase
 
 class TimeStretchSpecAug(AugmentationBase):
-    def __init__(self, stretch_min=0.8, stretch_max=1.2, *args, **kwargs):
-        self.stretch_rates = np.linspace(0.8, 1.2, 3)
-        self._aug = torchaudio.transforms.TimeStretch()
+    def __init__(self, stretch_min=0.8, stretch_max=1.2, n_stretcn=3, n_freq=128, *args, **kwargs):
+        self.stretch_rates = np.linspace(stretch_min, stretch_max, n_stretcn)
+        self._aug = torchaudio.transforms.TimeStretch(n_freq=n_freq)
 
     def __call__(self, data: Tensor):
         x = data.unsqueeze(1)

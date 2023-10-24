@@ -24,7 +24,9 @@
         "type": "TimeStretchSpecAug",
         "args": {
           "stretch_min": 0.8,
-          "stretch_max": 1.2
+          "stretch_max": 1.2,
+          "n_stretcn": 3,
+          "n_freq": 128
         }
       }
     ]
