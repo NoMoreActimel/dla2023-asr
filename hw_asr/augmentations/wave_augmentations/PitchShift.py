@@ -6,9 +6,9 @@ from hw_asr.augmentations.base import AugmentationBase
 
 
 class PitchShift(AugmentationBase):
-    def __init__(self, prob=0.5, *args, **kwargs):
+    def __init__(self, prob=0.5, sample_rate=16000, *args, **kwargs):
         self.prob = prob
-        self._aug = torch_audiomentations.Gain(*args, **kwargs)
+        self._aug = torch_audiomentations.PitchShift(sample_rate=sample_rate)
 
     def __call__(self, data: Tensor):
         if np.random.uniform() < self.prob:
