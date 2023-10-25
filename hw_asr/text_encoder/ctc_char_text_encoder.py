@@ -103,9 +103,8 @@ class CTCCharTextEncoder(CharTextEncoder):
     def ctc_lm_beam_search(self, probs, probs_length, beam_size: int = None) -> List[Hypothesis]:
         if beam_size is None:
             beam_size = self.beam_size
-        
-        probs = probs[:probs_length]
-        probs = [prob.numpy() for prob in probs]
+            
+        probs = [prob[:length].numpy() for prob, length in zip(probs, probs_length)]
         
         with multiprocessing.get_context("fork").Pool() as pool:
             predicts = self.lm_ctcdecoder.decode_batch(pool, probs, beam_width=beam_size)
