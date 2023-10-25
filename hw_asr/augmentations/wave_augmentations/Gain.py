@@ -5,7 +5,7 @@ from torch import Tensor
 from hw_asr.augmentations.base import AugmentationBase
 
 
-class PitchShift(AugmentationBase):
+class Gain(AugmentationBase):
     def __init__(self, prob=0.5, *args, **kwargs):
         self.prob = prob
         self._aug = torch_audiomentations.Gain(*args, **kwargs)
