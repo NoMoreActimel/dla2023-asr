@@ -31,7 +31,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         self.use_lm = use_lm
 
         if use_lm:
-            KENLM_PATH = ROOT_PATH / "data/librispeech-lm/4-gram.arpa"
+            KENLM_PATH = str(ROOT_PATH / "data/librispeech-lm/3-gram.pruned.1e-7.arpa")
 
             # https://github.com/kensho-technologies/pyctcdecode
             # https://github.com/kensho-technologies/pyctcdecode/blob/main/tutorials/03_eval_performance.ipynb
@@ -101,8 +101,6 @@ class CTCCharTextEncoder(CharTextEncoder):
 
 
     def ctc_lm_beam_search(self, probs, probs_length, beam_size: int = None) -> List[Hypothesis]:
-        assert len(probs.shape) == 2
-
         if beam_size is None:
             beam_size = self.beam_size
         

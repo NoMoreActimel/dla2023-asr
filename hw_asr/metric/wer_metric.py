@@ -43,7 +43,7 @@ class BeamsearchWERMetric(BaseMetric):
         log_probs_length = log_probs_length.detach().cpu().numpy()
 
         if self.text_encoder.use_lm:
-            predicted_texts = self.text_encoder(log_probs, log_probs_length)
+            predicted_texts = self.text_encoder.ctc_lm_beam_search(log_probs, log_probs_length)
         else:
             predicted_texts = np.array([
                 self.text_encoder.ctc_beam_search(log_prob, length)[0].text

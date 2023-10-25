@@ -123,7 +123,7 @@
     }
   ],
   "rare_eval_metrics": {
-    "n_epochs_frequency": 1,
+    "n_epochs_frequency": 10,
     "metrics": [
       {
         "type": "BeamsearchWERMetric",
