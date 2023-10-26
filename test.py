@@ -7,6 +7,7 @@ import torch
 from tqdm import tqdm
 
 import hw_asr.model as module_model
+from hw_asr.metric import BeamsearchCERMetric, BeamsearchWERMetric
 from hw_asr.text_encoder import CTCCharTextEncoder
 from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
@@ -47,10 +48,16 @@ def main(config, out_file):
     
     beam_search = None
     if isinstance(text_encoder, CTCCharTextEncoder):
+        wer_beamsearch = BeamsearchWERMetric(text_encoder)
+        cer_beamsearch = BeamsearchCERMetric(text_encoder)
+
         if text_encoder.use_lm:
             beam_search = text_encoder.ctc_lm_beam_search
         else:
             beam_search = text_encoder.ctc_beam_search
+    
+    wers = []
+    cers = []
 
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
@@ -66,21 +73,38 @@ def main(config, out_file):
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
             batch["argmax"] = batch["probs"].argmax(-1)
+
+            beam_search_results = None
+            if isinstance(text_encoder, CTCCharTextEncoder) and text_encoder.use_lm:
+                beam_search_results = text_encoder.ctc_lm_beam_search(
+                    batch["log_probs"], batch["log_probs_length"],
+                )
+                wers.append(wer_beamsearch(**batch))
+                cers.append(cer_beamsearch(**batch))
+
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
 
                 results.append({
-                        "ground_trurh": batch["text"][i],
-                        "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
+                    "ground_trurh": batch["text"][i],
+                    "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
                 })
 
-                if beam_search:
-                    results[-1].update({
-                            "pred_text_beam_search": beam_search(
-                                batch["log_probs"][i], batch["log_probs_length"][i],
-                            )[:10]
-                    })
+                if isinstance(text_encoder, CTCCharTextEncoder):
+                    if text_encoder.use_lm:
+                        beam_search_res = beam_search_results[i]
+                    else:
+                        beam_search_res = text_encoder.ctc_beam_search(
+                            batch["log_probs"][i], batch["log_probs_length"][i],
+                        )[:10]
+                    
+                    results[-1].update({"pred_text_beam_search": beam_search_res})
+    
+    results.append({
+        "wer": sum(wers) / len(wers),
+        "cer": sum(cers) / len(cers)
+    })
 
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)

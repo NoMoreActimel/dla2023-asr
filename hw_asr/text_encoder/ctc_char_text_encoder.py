@@ -36,7 +36,7 @@ class CTCCharTextEncoder(CharTextEncoder):
             # https://github.com/kensho-technologies/pyctcdecode
             # https://github.com/kensho-technologies/pyctcdecode/blob/main/tutorials/03_eval_performance.ipynb
             self.lm_ctcdecoder = build_ctcdecoder(
-                labels=[""] + list(self.alphabet),
+                labels=[""] + [c.upper() for c in self.alphabet],
                 kenlm_model_path=KENLM_PATH,
                 alpha=0.7,
                 beta=3.0,
@@ -103,6 +103,11 @@ class CTCCharTextEncoder(CharTextEncoder):
     def ctc_lm_beam_search(self, probs, probs_length, beam_size: int = None) -> List[Hypothesis]:
         if beam_size is None:
             beam_size = self.beam_size
+        
+        if torch.is_tensor(probs) and probs.is_cuda:
+            probs = probs.cpu()
+        if torch.is_tensor(probs_length) and probs_length.is_cuda:
+            probs_length = probs_length.cpu()
 
         probs = [prob[:length].numpy() for prob, length in zip(probs, probs_length)]
         
