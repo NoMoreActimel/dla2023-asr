@@ -31,7 +31,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         self.use_lm = use_lm
 
         if use_lm:
-            KENLM_PATH = str(ROOT_PATH / "data/librispeech-lm/3-gram.pruned.1e-7.arpa")
+            KENLM_PATH = str(ROOT_PATH / "data/librispeech-lm/4-gram.arpa")
 
             # https://github.com/kensho-technologies/pyctcdecode
             # https://github.com/kensho-technologies/pyctcdecode/blob/main/tutorials/03_eval_performance.ipynb
@@ -103,10 +103,15 @@ class CTCCharTextEncoder(CharTextEncoder):
     def ctc_lm_beam_search(self, probs, probs_length, beam_size: int = None) -> List[Hypothesis]:
         if beam_size is None:
             beam_size = self.beam_size
-            
+
         probs = [prob[:length].numpy() for prob, length in zip(probs, probs_length)]
         
         with multiprocessing.get_context("fork").Pool() as pool:
             predicts = self.lm_ctcdecoder.decode_batch(pool, probs, beam_width=beam_size)
+        
+        predicts = [
+            predict.lower().replace("'", "").replace("|", "").replace("??", "").strip()
+            for predict in predicts
+        ]
         
         return predicts
