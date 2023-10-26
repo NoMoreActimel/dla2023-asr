@@ -7,6 +7,7 @@ import torch
 from tqdm import tqdm
 
 import hw_asr.model as module_model
+from hw_asr.text_encoder import CTCCharTextEncoder
 from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
@@ -43,6 +44,13 @@ def main(config, out_file):
     model.eval()
 
     results = []
+    
+    beam_search = None
+    if isinstance(text_encoder, CTCCharTextEncoder):
+        if text_encoder.use_lm:
+            beam_search = text_encoder.ctc_lm_beam_search
+        else:
+            beam_search = text_encoder.ctc_beam_search
 
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
@@ -61,15 +69,19 @@ def main(config, out_file):
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
-                results.append(
-                    {
+
+                results.append({
                         "ground_trurh": batch["text"][i],
                         "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i], beam_size=100
-                        )[:10],
-                    }
-                )
+                })
+
+                if beam_search:
+                    results[-1].update({
+                            "pred_text_beam_search": beam_search(
+                                batch["log_probs"][i], batch["log_probs_length"][i],
+                            )[:10]
+                    })
+
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 
