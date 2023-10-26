@@ -106,7 +106,7 @@
     "text_encoder": {
       "type": "CTCCharTextEncoder",
       "args": {
-        "beam_size": 10,
+        "beam_size": 5,
         "use_lm": true
       }
     },
