@@ -77,17 +77,25 @@ def main(config, out_file):
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
             batch["argmax"] = batch["probs"].argmax(-1)
-
-            beam_search_results = None
-            if isinstance(text_encoder, CTCCharTextEncoder) and text_encoder.use_lm:
-                beam_search_results = text_encoder.ctc_lm_beam_search(
-                    batch["log_probs"], batch["log_probs_length"],
-                )
-                wers["beamsearch"].append(wer_beamsearch(**batch))
-                cers["beamsearch"].append(cer_beamsearch(**batch))
             
             wers["argmax"].append(wer_argmax(**batch))
             cers["argmax"].append(cer_argmax(**batch))
+
+            beam_search_results = None
+            if isinstance(text_encoder, CTCCharTextEncoder):
+                if text_encoder.use_lm:
+                    beam_search_results = text_encoder.ctc_lm_beam_search(
+                        batch["log_probs"], batch["log_probs_length"],
+                    )
+                    wers["beamsearch"].append(wer_beamsearch(**batch))
+                    cers["beamsearch"].append(cer_beamsearch(**batch))
+                else:
+                    probs, length, text = batch["probs"], batch["log_probs_length"], batch["text"]
+                    wers["beamsearch"].append(wer_beamsearch(probs, length, text))
+                    cers["beamsearch"].append(cer_beamsearch(probs, length, text))
+                    wers["argmax"].append(wer_argmax(probs, length, text))
+                    cers["argmax"].append(cer_argmax(probs, length, text))
+
 
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
@@ -102,12 +110,12 @@ def main(config, out_file):
                     if text_encoder.use_lm:
                         beam_search_res = beam_search_results[i]
                     else:
-                        beam_search_res = text_encoder.ctc_beam_search(
-                            batch["log_probs"][i], batch["log_probs_length"][i],
-                        )[:10]
-                    
-                    results[-1].update({"pred_text_beam_search": beam_search_res})
-    
+                        probs, length = batch["probs"][i], batch["log_probs_length"][i]
+                        hypos = text_encoder.ctc_beam_search(probs, length)
+                        beam_search_res = [hypo.text for hypo in hypos]
+                
+                results[-1]["pred_text_beam_search"] = beam_search_res
+
     results.append({
         "WER (beamsearch)": sum(wers["beamsearch"]) / len(wers["beamsearch"]),
         "CER (beamsearch)": sum(cers["beamsearch"]) / len(cers["beamsearch"]),
@@ -117,6 +125,8 @@ def main(config, out_file):
 
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
+
+    print(f"Saved results to {out_file}!")
 
 
 if __name__ == "__main__":
